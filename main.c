@@ -67,13 +67,10 @@ DINERO calcular_cambio(DINERO* m, size_t n, DINERO c[n], DINERO s[n])
          *      min( *m/c[i] , s[i], 15 ) -> min (*m/c[i], s[i] & 0x1111)
          */
         k = (*m / c[i] < (s[i] & 0xF)) ? *m / c[i] : s[i] & 0xF;
-        printf("K: %d (%x)\n", k, k);
         v |= k << 4 * i;
         *m -= k * c[i];
         s[i] -= k;
-        printf("Stock de %u: %d -> %d\n", c[i], s[i] + k, s[i]);
     }
-    printf("M: %u\n", *m);
     return v;
 }
 
@@ -123,6 +120,8 @@ int main(int argc, char** argv)
     check_error();
 
     int t = tamano(data);
+    if (t == 0)
+        die("No coin data in data file");
     for(i = 0; i < t; ++i)
         printf("[%d] %s\n", i, Componentei(data, i).key);
     puts("Select coin:");
