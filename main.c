@@ -4,12 +4,21 @@
 #include <stdio.h>
 #include <string.h>
 
-#define DINERO unsigned int
-#define DINERO_F "%u"
+// Defined in vectordinamico.h
+// #define DINERO
+// #define DINERO_F
 
-void check_orientation(DINERO* c, DINERO* s, int n)
+void check_orientation(DINERO* c, DINERO* s, size_t n)
 {
-    unsigned int aux;
+    /*
+     * ! La lista de monedas (c) y stock (s) deben estar ordenadas
+     * y en el mismo sentido
+     *
+     * Esta funcion le da la vuelta a la las listas si estan ordenadas
+     * de mayor a menor, ya que el algoritmo de cambio requiere los valores
+     * mas grandes en las posiciones mas grandes.
+     */
+    DINERO aux;
     if(c[0] > c[n - 1])
         for(int i = 0; i < n / 2; ++i)
         {
@@ -38,35 +47,44 @@ DINERO calcular_cambio(DINERO* m, size_t n, DINERO c[n], DINERO s[n])
      * Complejidad espacial: O(1)
      * Complejidad temporal: O(n)
      *
-     * Maxima cantidad monedas
-     * int:
+     * Limitaciones:
+     *
+     *  - Maxima cantidad monedas
+     *  int:
      *  sizeof int = 4 bytes = 32bits
      *  32/4 = 8 digitos hexadecimales = 8 posibles valores
      *
-     * Maximo cambio
+     * - Maximo cambio
      * Fxxxxxxx
      * 15 de c[n-1] + n de cada tipo mientras no llegue al valor de la siguiente
-     * (Limitado a 15 de c[n-1])
+     * (Limitado a 15 de c[n-1] por comodidad)
      */
     DINERO v = 0;
-    DINERO k;
+    DINERO k, l;
 
     if(c[0] > c[n - 1])
-        die("Unsorted coin values");
+        die("Unsorted coin keys");
     if(sizeof v * 2 < n)
-        die("Too much values");
+        die("Too much keys");
+    // Cantidad a cambiar demasiado grande para el sistema monetario elegido
     if(*m > c[n - 1] * 15)
         return -1;
 
     for(int i = n - 1; i >= 0 && *m != 0; i--)
     {
         /*
-         * Monedas del tipo c[i]:
-         *      min( *m/c[i] , s[i], 15 )
-         *      15 = 0xF -> min(15, s[i]) = s[i] & 15
-         *      min( *m/c[i] , s[i], 15 ) -> min (*m/c[i], s[i] & 0x1111)
+         * Numero de monedas del tipo c[i] necesitadas: *m/c[i]
+         * Maximas monedas que puede dar: min(s[i], 15):
+         *      a) s[i] > 15 :  15
+         *      b) s[i] < 15 : s[i]
+         * Monedas que va a dar:  min(s[i], 15, *m/c[i])
+         * En el digito i de v se guarda la cantidad de monedas del tipo c[i]
+         * El dinero a cambiar se reduce la cantidad por el valor
+         * El stock se reduce el valor
          */
-        k = (*m / c[i] < (s[i] & 0xF)) ? *m / c[i] : s[i] & 0xF;
+        k = *m/c[i];
+        l = (s[i] >> 4)? 0xF : s[i];
+        k = (k < l)? k : l;
         v |= k << 4 * i;
         *m -= k * c[i];
         s[i] -= k;
@@ -76,67 +94,68 @@ DINERO calcular_cambio(DINERO* m, size_t n, DINERO c[n], DINERO s[n])
 
 void interpr(DINERO v, size_t n, DINERO c[n], DINERO* k)
 {
-    DINERO m;
+    int m;
     if(c[0] > c[n - 1])
-        die("Unsorted coin values");
+        die("Unsorted coin keys");
 
     switch(v)
     {
+        /*
         case 0:
+            if(*k)
+                printf("Dinero no devuelto: " DINERO_F "\n", *k);
             break;
+            */
         case -1:
-            puts("Da billete");
+            puts("Too big ammount");
             break;
         default:
-            for(int i = n - 1; i >= 0; i--)
-                if((m = (v & 0xF << 4 * i)))
-                {
-                    m >>= 4 * i;
-                    printf(DINERO_F " de %d\n", m, c[i]);
+            for(int i = 0; i < n; i++){
+                m = v & 0xF;
+                v >>= 4;
+                if (m)
+                    printf("%d de " DINERO_F "\n", m, c[i]);
                 }
             if(*k)
-                printf("Dinero no devuelto: %u\n", *k);
+                printf("Dinero no devuelto: " DINERO_F "\n", *k);
+            break;
     }
 }
 
 
 int main(int argc, char** argv)
 {
-    DINERO d;
-    vectorD data = NULL;
-    TELEMENTO k;
-    int aux, i;
-    size_t n;
-    DINERO* c;
-    DINERO* s;
-    errno = 0;
+    DINERO d;            // dinero a cambiar
+    vectorD data = NULL; // valores de monedas y stock
+    TELEMENTO k;         // nodo para actualizar el stock
+    int i;               // indicador de moneda a usar
+    size_t n;            // cantidad de valores de moneda distintos
+    size_t t;            // cantidad de monedas distinto
+    DINERO* c;           // valores de monedas
+    DINERO* s;           // stock de monedas
+    FILE* f;             // Archivo con los datos de las monedas
+    errno = 0;           // errno
     if(argc != 2)
         die("Data file not loaded");
-    FILE* f = fopen(argv[1], "r");
+    f = fopen(argv[1], "r");
     check_error();
     get_data(f, &data);
     fclose(f);
-    f = fopen(argv[1], "w");
-    check_error();
-
-    int t = tamano(data);
-    if (t == 0)
+    t = tamano(data);
+    if(t == 0)
         die("No coin data in data file");
     for(i = 0; i < t; ++i)
-        printf("[%d] %s\n", i, Componentei(data, i).key);
+        printf("[%d] %s\n", i, Componentei(data, i).header);
     puts("Select coin:");
     do
     {
         scanf(" %d", &i);
     } while(i < 0 || i >= t);
-
-    n = Componentei(data, i).values_n;
-    c = Componentei(data, i).values;
-    s = Componentei(data, i).amount;
-
-    // its assumed that coin values are sorted
+    n = Componentei(data, i).size;
+    c = Componentei(data, i).keys;
+    s = Componentei(data, i).values;
+    // Se asume que los valores de las monedas estan ordenados
     check_orientation(c, s, n);
-
     while(1)
     {
         puts("Centimos a cambiar: ");
@@ -145,14 +164,19 @@ int main(int argc, char** argv)
             break;
         interpr(calcular_cambio(&d, n, c, s), n, c, &d);
     }
-    strncpy(k.key, Componentei(data, i).key, KEY_LEN);
-    k.values_n = n;
+    // ----------------------------------------------- //
+    // Actializamos el vector con el stock actual
+    strncpy(k.header, Componentei(data, i).header, KEY_LEN);
+    k.size = n;
     for(int l = 0; l < n; l++)
     {
-        k.values[l] = c[l];
-        k.amount[l] = s[l];
+        k.keys[l]   = c[l];
+        k.values[l] = s[l];
     }
     AsignaVector(&data, i, k);
+    // ----------------------------------------------- //
+    f = fopen(argv[1], "w");
+    check_error();
     update_data(f, data);
     LiberaVector(&data);
     fclose(f);

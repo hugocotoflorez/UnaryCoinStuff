@@ -1,26 +1,8 @@
+#include "vectordinamico.h"
 #include <stdbool.h>
 #include <stdlib.h>
+
 #define KEY_LEN 20
-
-#define MAX_VALUES 8
-
-struct NODE
-{
-    char key[KEY_LEN];
-    int values[MAX_VALUES];
-    int amount[MAX_VALUES];
-    int values_n;
-};
-
-typedef struct NODE TELEMENTO;
-
-typedef struct
-{
-    TELEMENTO* datos;
-    int tam;
-} STVECTOR;
-
-typedef STVECTOR* vectorD;
 
 
 bool EsNulo(vectorD v1)
@@ -82,7 +64,7 @@ TELEMENTO Componentei(vectorD v1, int posicion)
 
 int tamano(vectorD v1)
 {
-    if(EsNulo(v1)) 
+    if(EsNulo(v1))
         return 0;
     return v1->tam;
 }

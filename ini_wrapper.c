@@ -62,12 +62,14 @@ void get_data(FILE* file, vectorD* data)
     struct NODE current;      // current node
     char buff[BUFF_SIZE + 1]; // buffer (the +1 is to save a \0)
     int i            = 0;     // buffer index
-    int j            = 0;     // key index
+    int j            = 0;     // header index
     enum STATE state = NONE;  // current state
-    int vec_index    = -1;     // Index to save into vector
+    int vec_index    = -1;    // Index to save into vector
 
-    while((c = getc(file)) != EOF)
+    while (1)
     {
+        if((c = getc(file)) == EOF)
+            break;
         switch(lookup[c])
         {
             case HEADER_START:
@@ -80,41 +82,43 @@ void get_data(FILE* file, vectorD* data)
             case HEADER_END:
                 state   = NONE;
                 buff[i] = '\0';
-                if(IW_VERBOSE)printf("HEADER: %s\n", buff);
-                strcpy(current.key, buff);
+                if(IW_VERBOSE)
+                    printf("HEADER: %s\n", buff);
+                strcpy(current.header, buff);
 
                 break;
             case WHITESPACE:
                 // on whitespace: dont do anything
                 break;
             case NULLCHAR:
-                //puts("NULLCHAR");
-                // TODO WTF IF THIS
-                // eof? of error idk
+                // puts("NULLCHAR");
+                //  TODO WTF IF THIS
+                //  eof? of error idk
                 break;
             case EQUAL:
                 state   = GET_VALUE;
                 buff[i] = '\0';
                 i       = 0;
-                if(IW_VERBOSE)printf("|  KEY[%d]: %10s", j,buff);
-                current.values[j] = strtol(buff,NULL,10);
+                if(IW_VERBOSE)
+                    printf("|  KEY[%2d]: %-6s", j, buff);
+                current.keys[j] = strtol(buff, NULL, 10);
                 check_error();
-                current.values_n = j+1;
+                current.size = j + 1;
                 break;
             case EOL:
                 if(state == GET_VALUE)
                 {
                     buff[i] = '\0';
-                    if(IW_VERBOSE)printf("|  VALUE: %s\n", buff);
-                    current.amount[j++] = strtol(buff, NULL, 10);
+                    if(IW_VERBOSE)
+                        printf("|  VALUE: %s\n", buff);
+                    current.values[j++] = strtol(buff, NULL, 10);
                     check_error();
-                    i                   = 0;
-                    state               = NONE;
-                    // se incrementa al abrir un header
-                    if(tamano(*data) == vec_index )
-                        Aumentar(data,1);
+                    i     = 0;
+                    state = NONE;
+                    if(tamano(*data) == vec_index)
+                        Aumentar(data, 1);
                     AsignaVector(data, vec_index, current);
-                                    }
+                }
                 else if(state != NONE)
                     die("Unexpected end of line");
 
@@ -128,8 +132,8 @@ void get_data(FILE* file, vectorD* data)
                 }
                 else if(state == NONE)
                 {
-                    state = GET_KEY;
-                    i     = 0;
+                    state     = GET_KEY;
+                    i         = 0;
                     buff[i++] = c;
                 }
                 break;
@@ -138,19 +142,21 @@ void get_data(FILE* file, vectorD* data)
 }
 
 
-
-
-
 void update_data(FILE* f, vectorD data)
 {
-    for (int i = 0; i < tamano(data); ++i)
+    for(int i = 0; i < tamano(data); ++i)
     {
-        fprintf(f, "[%s]\n", Componentei(data, i).key);
-        printf( "[%s]\n", Componentei(data, i).key);
-        for(int j = 0; j < Componentei(data, i).values_n; ++j)
+        fprintf(f, "[%s]\n", Componentei(data, i).header);
+        if(IW_VERBOSE)
+            printf("[%s]\n", Componentei(data, i).header);
+        for(int j = 0; j < Componentei(data, i).size; ++j)
         {
-            fprintf(f, "%u = %u\n", Componentei(data, i).values[j], Componentei(data, i).amount[j]);
-            printf( "%u = %u\n", Componentei(data, i).values[j], Componentei(data, i).amount[j]);
+            fprintf(f, DINERO_F " = " DINERO_F "\n",
+            Componentei(data, i).keys[j], Componentei(data, i).values[j]);
+            if(IW_VERBOSE)
+                printf(DINERO_F " = " DINERO_F "\n",
+                Componentei(data, i).keys[j], Componentei(data, i).values[j]);
         }
+        putc('\n', f);
     }
 }

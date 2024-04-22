@@ -9,9 +9,12 @@
 
 // functions
 void get_data(FILE* file, vectorD* data);
-void die(const char* e);
-void check_error();
 void update_data(FILE* f, vectorD data);
 
+/*
+ * Estas funciones no deberia compartirlas desde aqui
+ */
+void die(const char* e);
+void check_error();
 
 #endif
